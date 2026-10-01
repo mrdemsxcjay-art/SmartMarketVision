@@ -11,6 +11,11 @@ Ce document répond précisément à deux demandes :
 
 ## 1. Mettre le projet sur GitHub
 
+> **État au 2026-10-01** : le dépôt est **déjà publié** sur
+> <https://github.com/mrdemsxcjay-art/SmartMarketVision> (branche `main`, 212 fichiers).
+> La CI n'y est pas encore : le jeton de publication n'avait pas la permission *Workflows*.
+> Voir `docs/LISEZ_MOI_CI.md` (copies texte des workflows + deux façons de les activer).
+
 Tout est prêt (`.gitignore`, `Dockerfile`, `.github/workflows/ci.yml`, `.devcontainer/`, `render.yaml`). Il ne manque que votre compte GitHub :
 
 ```bash

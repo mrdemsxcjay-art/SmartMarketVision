@@ -304,6 +304,29 @@ CI (`.github/workflows/ci.yml`) : 663 tests backend + 64 tests frontend, **sans 
 secret** (le bloc de vérification affirme `NOT_CONFIGURED` en l'absence de variables et refuse
 toute variable de jeton). Étapes reproduites localement avant le commit : elles passent.
 
+## MISE EN SERVICE (TELEGRAM RÉEL + DÉPÔT GITHUB) — 2026-10-01
+
+### Telegram : envoi réel vérifié
+| Étape | Résultat réel |
+|---|---|
+| Bot joignable | `@Smartmarketvisionbot` (vérifié par `getMe`) |
+| Message de test direct (`telegram_setup.py --send-test`) | **livré**, `message_id=2` |
+| Alerte de test par la chaîne complète (`POST /api/telegram/test`) | **livrée en mode REAL**, `message_id=5`, via la file durable (QUEUED → SENDING → SENT) |
+| Historique | 4 alertes, toutes `SENT` : 3 simulations DRY_RUN (10:16) + 1 envoi réel (12:31) — l'historique distingue honnêtement les modes |
+| Jeton dans les fichiers du projet / les logs / les payloads | **0 occurrence** (vérifié par recherche) ; l'API n'expose que `866774******` |
+| Fenêtre REAL (12:29 → 12:31) | aucune alerte parasite : les observations étaient toutes `NO_TRADE`, **silencieuses par configuration** |
+
+### Trois défauts réels trouvés par cette mise en service
+1. **`.env` ignoré hors du dossier `backend/`** — `TelegramParams` déclarait `env_file=".env"` **relatif** : lancer l'application depuis un autre dossier faisait retomber le mode sur `DRY_RUN` alors que le fichier demandait `REAL`. Corrigé (chemins absolus `PROJECT_ROOT/.env`, `BASE_DIR/.env`) + 3 tests de non-régression.
+2. **La suite de tests pouvait utiliser le jeton réel** — `tests/conftest.py` neutralisait les variables d'environnement, mais pydantic-settings lit aussi le **fichier** `.env`. Un test a ainsi envoyé un vrai message « hello » sur le bot. Garantie ajoutée dans `Settings` : dès que `APP_ENV=test`, les valeurs Telegram sont ignorées **à la source** + 2 tests qui interdisent toute régression.
+3. **Un clic sur « tester » pouvait ne rien envoyer** — l'identité de l'alerte de test était figée : après le premier envoi, toute demande suivante répondait `ALREADY_QUEUED`. L'identité est désormais horodatée (la déduplication continue de protéger la même seconde) + 3 tests, dont un avec horloge contrôlée.
+
+### Dépôt GitHub
+Dépôt poussé : **<https://github.com/mrdemsxcjay-art/SmartMarketVision>** (public, branche `main`, 212 fichiers, `.env` et `data/` absents — vérifié par l'API GitHub). Le jeton fourni n'avait pas la permission **Workflows** : GitHub refuse alors tout push contenant `.github/workflows/*`. Le dépôt est donc publié **sans** la CI, et les deux workflows sont fournis en copies texte (`docs/ci_workflow.yml.txt`, `docs/pages_workflow.yml.txt`) avec la marche à suivre (`docs/LISEZ_MOI_CI.md`) : soit l'opérateur accorde la permission, soit il colle les fichiers via l'interface web.
+
+### Compteurs après corrections
+Backend **672 tests** (663 + 9) · Frontend **64 tests** · build OK · serveur relancé en `REAL` avec la configuration de l'exploitant.
+
 ## GLOBAL
 
 ### Ce qui a été tenu, phase par phase
