@@ -56,8 +56,13 @@ class TestApiDoesNotLeakSecrets:
         for forbidden in ("bot_token\"", "TELEGRAM_BOT_TOKEN", "AAFake"):
             assert forbidden not in body
         payload = json.loads(body)
-        assert payload["telegram"]["bot_token_preview"] == "NOT_SET"
-        assert payload["config"]["telegram_bot_token_present"] is False
+        preview = payload["telegram"]["bot_token_preview"]
+        # la regle est le MASQUAGE, pas l'absence : configure ou non, l'apercu ne
+        # doit jamais contenir le jeton (et "NOT_SET" quand il n'y en a pas).
+        assert preview == "NOT_SET" or preview.endswith("*" * 6)
+        if settings.telegram_bot_token:
+            assert settings.telegram_bot_token not in preview
+        assert payload["config"]["telegram_bot_token_present"] is bool(settings.telegram_bot_token)
 
     def test_health_and_config_are_sanitised(self, client):
         for url in ("/api/health", "/api/ready", "/api/status"):
@@ -77,7 +82,9 @@ class TestApiDoesNotLeakSecrets:
 class TestTelegramNotifier:
     @pytest.mark.asyncio
     async def test_not_configured_is_a_soft_failure(self):
-        notifier = TelegramNotifier(bot_token=None, chat_id=None)
+        # chaines vides explicites : le test ne doit JAMAIS retomber sur le jeton
+        # reellement configure dans .env (il enverrait un vrai message).
+        notifier = TelegramNotifier(bot_token="", chat_id="")
         result = await notifier.send_message("hello")
         assert result.status is DeliveryStatus.NOT_CONFIGURED
         assert result.ok is False
@@ -167,3 +174,28 @@ class TestNoTradingSurface:
         assert payload["safety"]["order_execution"] is False
         assert payload["safety"]["broker_connection"] is False
         assert payload["safety"]["position_management"] is False
+
+
+class TestTestEnvironmentNeverReachesTelegram:
+    """La configuration Telegram est neutralisee des que APP_ENV=test.
+
+    Sans cette garantie, un test executé sur la machine de l'exploitant pouvait
+    utiliser le jeton reel de son .env et envoyer un vrai message (cas observe).
+    """
+
+    def test_settings_ignore_the_operator_token_in_test_env(self):
+        from app.config import AppEnv, settings
+
+        assert settings.app_env is AppEnv.TEST, "la suite de tests pose APP_ENV=test"
+        assert settings.telegram_bot_token is None
+        assert settings.telegram_chat_id is None
+        assert settings.telegram_status == "NOT_CONFIGURED"
+
+    @pytest.mark.asyncio
+    async def test_default_notifier_cannot_send_anything_in_test_env(self):
+        from app.services.telegram import TelegramNotifier
+
+        notifier = TelegramNotifier()  # aucun argument : retombe sur la configuration
+        assert notifier.configured is False
+        result = await notifier.send_message("ce message ne doit jamais partir")
+        assert result.status is DeliveryStatus.NOT_CONFIGURED

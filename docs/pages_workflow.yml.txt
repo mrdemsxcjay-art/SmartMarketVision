@@ -1,0 +1,72 @@
+# Publication MANUELLE de l'interface sur GitHub Pages.
+#
+# À savoir avant de lancer : GitHub Pages ne sert que des fichiers statiques.
+# Le backend (API + WebSocket + captures) NE PEUT PAS y tourner. Vous verrez donc
+# l'interface complète, mais les appels /api/... échoueront et le dashboard
+# affichera honnêtement DATA UNAVAILABLE / RECONNECTING — jamais une valeur
+# inventée. Pour un aperçu réel et vivant, utilisez un Codespace (aperçu
+# automatique sur le port 8000) ou un déploiement Docker (render.yaml).
+#
+# Déclenchement : onglet Actions → "Publier le dashboard (statique)" → Run workflow.
+name: Publier le dashboard (statique)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # base "./" est déjà réglée dans vite.config.ts : les chemins relatifs
+      # fonctionnent aussi bien à la racine qu'en sous-chemin de dépôt
+      - run: npm run build
+      - name: Bandeau d'avertissement (interface seule, sans backend)
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          index = pathlib.Path("dashboard_build/index.html")
+          html = index.read_text()
+          banner = (
+              '<div style="font:14px system-ui;background:#7c2d12;color:#fed7aa;'
+              'padding:10px 14px;text-align:center">Aperçu statique : l\'API n\'est pas '
+              'joignable depuis GitHub Pages. Les panneaux afficheront « DATA UNAVAILABLE » — '
+              'aucune donnée n\'est simulée. Pour l\'aperçu complet, ouvrez un Codespace '
+              '(port 8000) ou un déploiement Docker.</div>'
+          )
+          html = html.replace("<body>", "<body>" + banner, 1)
+          index.write_text(html)
+          print("bandeau ajouté")
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dashboard_build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

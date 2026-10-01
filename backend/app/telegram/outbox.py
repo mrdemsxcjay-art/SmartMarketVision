@@ -171,12 +171,20 @@ class TelegramOutbox:
         return True
 
     def enqueue_test_alert(self) -> bool:
-        """One operator-triggered test alert, queued through the very same path."""
+        """One operator-triggered test alert, queued through the very same path.
+
+        L'identite est horodatee : un clic sur « tester » doit produire UN
+        message. La deduplication protege contre deux alertes identiques d'une
+        meme opportunite, elle ne doit pas avaler une demande explicite de
+        l'operateur (elle le faisait : le second test repondait ALREADY_QUEUED).
+        Deux clics dans la meme seconde restent dedupliques.
+        """
         from app.opportunities.models import Opportunity, OpportunityState
 
         now = datetime.now(tz=timezone.utc)
+        stamp = now.strftime("%Y%m%d%H%M%S")
         probe = Opportunity(
-            id="op_test",
+            id=f"op_test_{stamp}",
             dedup_key="op_test",
             symbol="EURUSD",
             timeframe="M15",
@@ -188,7 +196,7 @@ class TelegramOutbox:
             blocked_by="TEST_MANUEL",
             created_at=now,
             updated_at=now,
-            alert_key="TEST|EURUSD|M15",
+            alert_key=f"TEST|EURUSD|M15|{stamp}",
             note="Test de connexion declenche par l'operateur.",
         )
         return self.enqueue_opportunity(probe, "TELEGRAM_TEST")

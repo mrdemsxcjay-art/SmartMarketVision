@@ -1,0 +1,87 @@
+# Intégration continue : à chaque push, les tests backend et frontend
+# s'exécutent. Aucun secret n'est nécessaire : la suite backend utilise un
+# provider de marché déterministe hors ligne (tests/conftest.py) et n'appelle
+# jamais Internet.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Tests backend (P1 → P8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Installer les dépendances déclarées
+        run: pip install -r backend/requirements.txt
+
+      - name: Vérifier la configuration (.env absent = NOT_CONFIGURED, jamais une erreur)
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "backend")
+          from app.config import settings
+          print("provider :", settings.market_data_provider)
+          print("telegram :", "configuré" if settings.telegram_bot_token else "NOT_CONFIGURED (attendu en CI)")
+          assert not settings.telegram_bot_token, "aucun secret ne doit être présent en CI"
+          PY
+
+      - name: Suite complète
+        working-directory: backend
+        run: python -m pytest tests/ -q
+
+      - name: Vérifier que la chaîne P5 → P8 se construit sans réseau
+        run: |
+          python - <<'PY'
+          # Le token n'est ni demandé ni imprimé : on vérifie seulement que la
+          # chaîne se construit et que le mode reste NOT_CONFIGURED sans secret.
+          import os, pathlib, sys, tempfile
+          os.environ["DATABASE_URL"] = (
+              f"sqlite+pysqlite:///{pathlib.Path(tempfile.mkdtemp()) / 'ci.db'}"
+          )
+          sys.path.insert(0, "backend")
+          from app.config import settings
+          from app.telegram.params import TelegramParams
+          from app.telegram.messages import build_message  # noqa: F401  (import vérifié)
+          params = TelegramParams()
+          print("mode Telegram sans secret :", params.effective_mode(False))
+          assert params.effective_mode(False) == "NOT_CONFIGURED"
+          print("outil de chaîne présent :", pathlib.Path("backend/tools/live_chain.py").exists())
+          PY
+
+  frontend:
+    name: Tests frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - name: Tests (Vitest)
+        run: npm test -- --run
+      - name: Build du dashboard (doit produire dashboard_build/)
+        run: npm run build
+      - name: Vérifier la sortie
+        run: test -f dashboard_build/index.html && echo "dashboard_build/index.html présent"

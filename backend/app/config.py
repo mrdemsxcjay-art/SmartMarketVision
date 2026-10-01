@@ -88,6 +88,22 @@ class Settings(BaseSettings):
 
     # ----------------------------------------------------------- validators
     @model_validator(mode="after")
+    def _never_reach_telegram_from_tests(self) -> "Settings":
+        """Garantie de securite : un test ne peut JAMAIS envoyer un vrai message.
+
+        Le ``.env`` de l'exploitant contient un vrai jeton. La suite de tests
+        neutralise les variables d'environnement, mais pydantic-settings lit
+        aussi le fichier ``.env`` : la configuration Telegram restait donc
+        active pendant les tests, et un double de test a deja envoye un message
+        reel. Des que ``APP_ENV=test`` (valeur posee par la suite de tests), les
+        deux valeurs sont donc ignorees ici, a la source.
+        """
+        if self.app_env is AppEnv.TEST:
+            self.telegram_bot_token = None
+            self.telegram_chat_id = None
+        return self
+
+    @model_validator(mode="after")
     def _resolve_database_path(self) -> "Settings":
         """Resolve a relative SQLite path against the project root.
 

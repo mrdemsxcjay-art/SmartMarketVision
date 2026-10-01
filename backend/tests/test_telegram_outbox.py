@@ -114,7 +114,7 @@ def opportunity(market):
 
 
 def make_outbox(tmp_path, *, mode: str = MODE_DRY_RUN, notifier=None, params: TelegramParams | None = None) -> TelegramOutbox:
-    params = params or TelegramParams()
+    params = params or test_params()
     params.mode = mode
     return TelegramOutbox(
         params=params,
@@ -126,9 +126,23 @@ def make_outbox(tmp_path, *, mode: str = MODE_DRY_RUN, notifier=None, params: Te
     )
 
 
+def test_params(**overrides) -> "TelegramParams":
+    """Parametres hermetiques : aucun test ne depend du .env de la machine.
+
+    Le fichier .env de la racine contient la configuration de l'exploitant (mode
+    DRY_RUN ou REAL, jeton...). Un test doit verifier le code, pas la
+    configuration locale : on construit donc les parametres sur les valeurs par
+    defaut, en ignorant explicitement tout fichier.
+    """
+    from app.telegram.params import TelegramParams as _Params
+
+    return _Params(_env_file=None, **overrides)
+
+
+
 class TestMessage:
     def test_the_message_has_the_requested_structure(self, opportunity):
-        text = build_message(opportunity, TelegramParams())
+        text = build_message(opportunity, test_params())
         lines = text.splitlines()
         assert lines[0] == "🚨 SMART MARKET VISION"
         assert lines[1] == f"{opportunity.symbol} · {opportunity.timeframe}"
@@ -141,7 +155,7 @@ class TestMessage:
         assert "aucune exécution automatique" in text.lower()
 
     def test_a_sell_uses_the_red_icon_and_a_watch_the_eyes(self, market, opportunity):
-        params = TelegramParams()
+        params = test_params()
         assert "🟢" in build_message(opportunity, params)
         clone = opportunity.model_copy(update={"direction": "SELL", "state": OpportunityState.ACTIVE.value})
         assert "🔴 SELL" in build_message(clone, params)
@@ -153,27 +167,27 @@ class TestMessage:
         refusal = opportunity.model_copy(
             update={"direction": "NO_TRADE", "no_trade_reason": NoTradeReason.CONTRADICTORY.value}
         )
-        assert should_alert(refusal, TelegramParams().message) is False
-        enabled = TelegramParams()
+        assert should_alert(refusal, test_params().message) is False
+        enabled = test_params(message={"send_no_trade": True})
         enabled.message.send_no_trade = True
         text = build_message(refusal, enabled)
         assert "⛔" in text and NoTradeReason.CONTRADICTORY.value in text
         assert should_alert(refusal, enabled.message) is True
-        assert should_alert(opportunity, TelegramParams().message) is True
+        assert should_alert(opportunity, test_params().message) is True
 
     def test_the_message_never_contains_an_order_vocabulary(self, opportunity):
-        text = build_message(opportunity, TelegramParams()).upper()
+        text = build_message(opportunity, test_params()).upper()
         for forbidden in ("STOP LOSS", "TAKE PROFIT", "LOT ", "BROKER", "PROBABIL", "GARANTI", "PERFORMANCE"):
             assert forbidden not in text
 
     def test_the_message_never_contains_the_token(self, opportunity):
-        params = TelegramParams()
+        params = test_params()
         text = build_message(opportunity, params)
         caption = build_caption(opportunity, params)
         assert FAKE_TOKEN not in text and FAKE_TOKEN not in caption
 
     def test_a_long_message_is_truncated_to_the_limit(self, opportunity):
-        params = TelegramParams()
+        params = test_params()
         params.message.max_chars = 200
         text = build_message(opportunity, params)
         assert len(text) <= 200
@@ -196,10 +210,13 @@ class TestModes:
         assert absent.mode == MODE_NOT_CONFIGURED, "REAL ne peut pas s'inventer sans variables"
 
     def test_the_mode_comes_from_the_environment_not_from_the_api(self, tmp_path):
-        params = TelegramParams()
+        params = test_params()
         applied = params.apply_overrides({"mode": {"mode": "REAL"}, "message": {"title": "X"}})
         assert any("ignored:mode" in line for line in applied)
-        assert params.mode == MODE_DRY_RUN
+        # l'API ne peut pas changer le mode : il vient de la configuration.
+        # test_params() ignore tout fichier, la valeur est donc deterministe.
+        assert params.mode.upper() == MODE_DRY_RUN
+        assert params.apply_overrides({"mode": {}}) == ["ignored:mode (seul .env decide du mode)"]
         assert params.message.title == "X"
 
 
@@ -332,7 +349,7 @@ class TestDispatcher:
         image.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 40)
 
         notifier = RecordingNotifier()
-        params = TelegramParams()
+        params = test_params()
         params.mode = MODE_REAL
         outbox = TelegramOutbox(
             params=params,
@@ -353,7 +370,7 @@ class TestDispatcher:
     @pytest.mark.asyncio
     async def test_a_missing_capture_never_blocks_the_text_alert(self, tmp_path, opportunity):
         notifier = RecordingNotifier()
-        params = TelegramParams()
+        params = test_params()
         params.mode = MODE_REAL
         params.delivery.capture_wait_seconds = 0.0
         outbox = TelegramOutbox(
@@ -475,3 +492,90 @@ def _session_factory(tmp_path):
             session.close()
 
     return scope
+
+class TestEnvFileWiring:
+    """Le .env de la RACINE doit etre lu (bug corrige : chemin relatif)."""
+
+    def test_env_file_is_the_project_root(self) -> None:
+        from pathlib import Path
+
+        from app.config import PROJECT_ROOT
+        from app.telegram.params import TelegramParams
+
+        declared = TelegramParams.model_config.get("env_file")
+        paths = [declared] if isinstance(declared, str) else list(declared or [])
+        resolved = {Path(item).resolve() for item in paths}
+        assert (PROJECT_ROOT / ".env").resolve() in resolved, resolved
+
+    def test_mode_is_read_from_an_env_file(self, tmp_path) -> None:
+        from app.telegram.params import TelegramParams
+
+        env = tmp_path / ".env"
+        env.write_text("TELEGRAM_MODE=REAL\nTELEGRAM_ENABLED=true\n", encoding="utf-8")
+        params = TelegramParams(_env_file=env)
+        assert params.mode.upper() == "REAL"
+        assert params.effective_mode(True) == "REAL"
+        assert params.effective_mode(False) == "NOT_CONFIGURED"
+
+    def test_a_file_saying_real_never_overrides_missing_variables(self, tmp_path) -> None:
+        from app.telegram.params import TelegramParams
+
+        env = tmp_path / ".env"
+        env.write_text("TELEGRAM_MODE=REAL\n", encoding="utf-8")
+        params = TelegramParams(_env_file=env)
+        # sans jeton ni chat_id, REAL est refuse : le mode retombe sur NOT_CONFIGURED
+        assert params.effective_mode(False) == "NOT_CONFIGURED"
+
+
+class TestOperatorTestAlert:
+    """Un clic sur « tester » doit produire un message, pas etre avale."""
+
+    def test_a_second_click_in_the_same_second_is_deduplicated(self, tmp_path) -> None:
+        """Un double-clic ne doit pas produire deux messages (anti-spam)."""
+        outbox = make_outbox(tmp_path)
+        assert outbox.enqueue_test_alert() is True
+        assert outbox.enqueue_test_alert() is False
+        assert len(outbox.history(limit=10)) == 1
+
+    def test_a_later_click_sends_a_new_message(self, tmp_path, monkeypatch) -> None:
+        """Un test demande plus tard doit repartir : sinon le bouton ne repond plus.
+
+        C'est le defaut corrige : l'identite etait figee, donc tout test ulterieur
+        repondait ALREADY_QUEUED et l'operateur ne recevait plus rien.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        import app.telegram.outbox as outbox_module
+
+        real_datetime = datetime
+        moment = {"now": real_datetime(2026, 10, 1, 12, 0, 0, tzinfo=timezone.utc)}
+
+        class FrozenDatetime(real_datetime):  # type: ignore[misc, valid-type]
+            @classmethod
+            def now(cls, tz=None):  # noqa: D102 - clock controlled by the test
+                return moment["now"]
+
+        monkeypatch.setattr(outbox_module, "datetime", FrozenDatetime)
+
+        factory = _session_factory(tmp_path)
+        outbox = TelegramOutbox(
+            params=test_params(),
+            repository=TelegramOutboxRepository(session_factory=factory),
+            notifier=RecordingNotifier(),
+            bus=EventBus(),
+        )
+        assert outbox.enqueue_test_alert() is True
+        assert outbox.enqueue_test_alert() is False, "meme seconde : deduplique"
+        moment["now"] = moment["now"] + timedelta(seconds=30)
+        assert outbox.enqueue_test_alert() is True, "plus tard : un nouveau message part"
+        assert len(outbox.history(limit=10)) == 2
+
+    def test_the_alert_carries_the_test_identity(self, tmp_path) -> None:
+        outbox = make_outbox(tmp_path)
+        outbox.enqueue_test_alert()
+        row = outbox.history(limit=1)[0]
+        assert row["event_type"] == "TELEGRAM_TEST"
+        assert row["symbol"] == "EURUSD"
+        assert "op_test" in (row["opportunity_id"] or "")
+        # aucun ordre, aucune execution : l'alerte est informative
+        assert outbox.status()["mode"] in ("NOT_CONFIGURED", "DRY_RUN", "REAL")

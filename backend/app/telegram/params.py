@@ -18,6 +18,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.config import BASE_DIR, PROJECT_ROOT
+
 #: how the bot is allowed to behave
 MODE_NOT_CONFIGURED = "NOT_CONFIGURED"
 MODE_DRY_RUN = "DRY_RUN"
@@ -65,7 +67,17 @@ class TelegramDeliveryParams(BaseModel):
 class TelegramParams(BaseSettings):
     """Runtime parameters of the Telegram interface (``TELEGRAM_`` prefix)."""
 
-    model_config = SettingsConfigDict(env_prefix="TELEGRAM_", env_file=".env", extra="ignore")
+    #: The .env of the PROJECT ROOT, given as an absolute path: a relative
+    #: ``".env"`` is resolved against the current working directory, so the
+    #: parameters silently ignored the file whenever the process was started
+    #: from another directory (the mode stayed DRY_RUN while .env said REAL).
+    #: Environment variables keep precedence over the file.
+    model_config = SettingsConfigDict(
+        env_prefix="TELEGRAM_",
+        env_file=(PROJECT_ROOT / ".env", BASE_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     enabled: bool = Field(default=True)
     mode: str = Field(default=MODE_DRY_RUN, description="DRY_RUN | REAL (REAL only if variables exist)")
