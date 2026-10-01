@@ -1,0 +1,47 @@
+# Déploiement Render en un clic depuis ce dépôt GitHub.
+#
+#   1. poussez ce dépôt sur GitHub
+#   2. Render → "New +" → "Blueprint" → choisissez ce dépôt
+#   3. Render lit ce fichier, construit le Dockerfile et vous donne une URL
+#      publique du type https://smart-market-vision.onrender.com
+#
+# Les deux valeurs Telegram ne sont PAS dans le dépôt : elles se saisissent dans
+# l'interface Render (Environment → Secret). Tant qu'elles sont vides,
+# l'application tourne en NOT_CONFIGURED : le scanner n'est jamais bloqué.
+services:
+  - type: web
+    name: smart-market-vision
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Render impose son propre port : le Dockerfile suit $PORT automatiquement.
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SCANNER_ENABLED
+        value: "true"
+      - key: CORS_ORIGINS
+        value: "*"
+      # ---- Telegram : à saisir dans l'interface (jamais dans le dépôt) ----
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_MODE
+        value: DRY_RUN     # passez à REAL dans l'interface quand vous êtes prêt
+      - key: TELEGRAM_SEND_NO_TRADE
+        value: "false"
+      - key: TELEGRAM_SEND_CAPTURE
+        value: "true"
+    # Le plan gratuit n'a pas de disque persistant : base SQLite et captures
+    # repartent de zéro à chaque redéploiement (l'historique de marché se
+    # reconstruit automatiquement). Pour les conserver, passez sur un plan payant
+    # et décommentez :
+    # disk:
+    #   name: smv-data
+    #   mountPath: /app/data
+    #   sizeGB: 1

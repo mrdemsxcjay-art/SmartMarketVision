@@ -1,0 +1,186 @@
+{
+  "generated_at": "2026-10-01T07:58:24.553706+00:00",
+  "checks": [
+    {
+      "name": "flux temps reel LIVE",
+      "passed": true,
+      "detail": "etat affiche : LIVE"
+    },
+    {
+      "name": "moteur SMC/ICT declare ENABLED",
+      "passed": true,
+      "detail": "{\"CHART_PATTERN_ENGINE\": \"ENABLED\", \"PRICE_ACTION_ENGINE\": \"ENABLED\", \"SMC_ICT_ENGINE\": \"ENABLED\"}"
+    },
+    {
+      "name": "panneau SMC/ICT == API",
+      "passed": true,
+      "detail": "47 objet(s) affiche(s) / 47 servi(s)"
+    },
+    {
+      "name": "familles SMC/ICT rendues",
+      "passed": true,
+      "detail": "UI={'STRUCTURE': 1, 'LIQUIDITY': 1, 'GAPS': 1, 'BLOCKS': 1, 'RANGE': 1} API=['BLOCKS', 'GAPS', 'LIQUIDITY', 'RANGE', 'STRUCTURE']"
+    },
+    {
+      "name": "licite = estimation annoncee",
+      "passed": true,
+      "detail": "Structure, déséquilibres, blocs d’ordres et liquidité sont mesurés sur bougies c"
+    },
+    {
+      "name": "selection SMC/ICT affichee sur le graphique",
+      "passed": true,
+      "detail": "SMC / ICTBOSEURUSD M15 · BEARISH · CONFIRMED · 81% · 3 / 5 calques (li"
+    },
+    {
+      "name": "geometrie SMC reellement dessinee (pixels canvas)",
+      "passed": true,
+      "detail": "structure 638->7087, liquide 128->148, zones 6228->6328"
+    },
+    {
+      "name": "filtre SMC / ICT",
+      "passed": true,
+      "detail": "panneau SMC=True, price action masque=True"
+    },
+    {
+      "name": "aucune instruction de trading dans le DOM",
+      "passed": true,
+      "detail": "mots trouves : []"
+    },
+    {
+      "name": "snapshot SMC/ICT recu sur le bus partage",
+      "passed": true,
+      "detail": "1 snapshot(s), 0 evenement(s) SMC sur la session"
+    },
+    {
+      "name": "evenement SMC publie en direct",
+      "passed": true,
+      "detail": "aucun nouvel objet pendant la session (moteur deterministe : le snapshot porte l'etat courant)"
+    },
+    {
+      "name": "aucun rechargement de page",
+      "passed": true,
+      "detail": "le tag pose au chargement est intact"
+    },
+    {
+      "name": "panneau SMC/ICT toujours monte apres le flux",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "portrait 390x844 : aucun debordement horizontal",
+      "passed": true,
+      "detail": "scrollWidth=390 viewport=390 elements hors cadre=0 (dont 523 dans un rail qui defile)"
+    },
+    {
+      "name": "portrait 390x844 : commandes utilisables au doigt",
+      "passed": true,
+      "detail": "99 commande(s), hauteur minimale 32px"
+    },
+    {
+      "name": "portrait 390x844 : graphique lisible",
+      "passed": true,
+      "detail": "hauteur du graphique 388px"
+    },
+    {
+      "name": "portrait 390x844 : panneau SMC/ICT rendu",
+      "passed": true,
+      "detail": "47 objet(s) affiche(s)"
+    },
+    {
+      "name": "portrait : une commande SMC repond au doigt",
+      "passed": true,
+      "detail": "les preuves s'ouvrent au tap"
+    },
+    {
+      "name": "paysage 844x390 : aucun debordement horizontal",
+      "passed": true,
+      "detail": "scrollWidth=844 viewport=844 elements hors cadre=0 (dont 160 dans un rail qui defile)"
+    },
+    {
+      "name": "paysage 844x390 : commandes utilisables au doigt",
+      "passed": true,
+      "detail": "99 commande(s), hauteur minimale 32px"
+    },
+    {
+      "name": "paysage 844x390 : graphique lisible",
+      "passed": true,
+      "detail": "hauteur du graphique 265px"
+    },
+    {
+      "name": "paysage 844x390 : panneau SMC/ICT rendu",
+      "passed": true,
+      "detail": "47 objet(s) affiche(s)"
+    },
+    {
+      "name": "aucun prix affiche qui ne soit servi par l'API",
+      "passed": true,
+      "detail": "29 prix affiche(s), 0 inconnu(s) de l'API : []"
+    },
+    {
+      "name": "API SMC/ICT sans instruction de trading",
+      "passed": true,
+      "detail": "objets=47, statut=ACTIVE SMC ICT"
+    },
+    {
+      "name": "aucune erreur console",
+      "passed": true,
+      "detail": "0 erreur(s)"
+    }
+  ],
+  "passed": 25,
+  "failed": 0,
+  "results": {
+    "api_objects": 47,
+    "canvas": {
+      "before": {
+        "canvases": 7,
+        "structure": 638,
+        "liquidity": 128,
+        "zones": 6228,
+        "opaque": 628056
+      },
+      "after": {
+        "canvases": 7,
+        "structure": 7087,
+        "liquidity": 148,
+        "zones": 6328,
+        "opaque": 628056
+      }
+    },
+    "mobile": {
+      "portrait": {
+        "overflow": {
+          "viewport": 390,
+          "scrollWidth": 390,
+          "bodyScrollWidth": 390,
+          "inside_scrollers": 523,
+          "offenders": []
+        },
+        "touch": {
+          "count": 99,
+          "tooSmall": [],
+          "minHeight": 32
+        },
+        "chart_height": 388,
+        "rows": 47
+      },
+      "landscape": {
+        "overflow": {
+          "viewport": 844,
+          "scrollWidth": 844,
+          "bodyScrollWidth": 844,
+          "inside_scrollers": 160,
+          "offenders": []
+        },
+        "touch": {
+          "count": 99,
+          "tooSmall": [],
+          "minHeight": 32
+        },
+        "chart_height": 265,
+        "rows": 47
+      }
+    },
+    "console_errors": []
+  }
+}

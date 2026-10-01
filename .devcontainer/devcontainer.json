@@ -1,0 +1,25 @@
+{
+  "name": "SMART MARKET VISION",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-dejavu-core",
+  "postCreateCommand": "bash scripts/dev_setup.sh",
+  "postStartCommand": "bash scripts/dev_start.sh",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "SMART MARKET VISION (dashboard + API)",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "dbaeumer.vscode-eslint"]
+    }
+  },
+  "remoteEnv": {
+    "LOG_LEVEL": "INFO"
+  }
+}

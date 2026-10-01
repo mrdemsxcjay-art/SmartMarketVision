@@ -1,0 +1,19 @@
+# secrets : jamais dans une image
+.env
+**/.env
+# environnements et caches
+.venv/
+venv/
+**/__pycache__/
+.pytest_cache/
+node_modules/
+frontend/node_modules/
+# données d'exécution (montées en volume)
+data/
+# artefacts de build locaux (reconstruits dans l'étape Node)
+frontend/dashboard_build/
+frontend/dist/
+# divers
+.git/
+reports/
+*.log

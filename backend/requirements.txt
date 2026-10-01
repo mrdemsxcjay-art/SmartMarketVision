@@ -1,0 +1,15 @@
+# SMART MARKET VISION - backend runtime dependencies (Phase 1)
+# Pillow est requis par le moteur de capture (Phase 7) : il rend les PNG a partir
+# des chandeliers reels. Il etait installe dans l'environnement de developpement
+# sans etre declare, ce qui cassait l'import sur une machine neuve.
+Pillow==12.3.0
+fastapi==0.142.1
+uvicorn[standard]==0.54.0
+httpx==0.28.1
+pydantic==2.13.4
+pydantic-settings==2.15.0
+SQLAlchemy==2.1.1
+
+# test-only
+pytest==9.0.3
+pytest-asyncio==1.4.0

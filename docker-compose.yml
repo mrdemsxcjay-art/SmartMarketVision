@@ -1,0 +1,24 @@
+# Lancement "tout en un" : API + dashboard sur http://localhost:8000
+#
+#   cp .env.example .env      # puis remplissez TELEGRAM_* si vous le souhaitez
+#   docker compose up -d --build
+#
+# Le .env est lu au lancement (jamais copié dans l'image) et ./data est monté :
+# la base SQLite et les captures PNG survivent aux redémarrages.
+services:
+  app:
+    build: .
+    image: smart-market-vision:phase8
+    container_name: smart-market-vision
+    env_file:
+      - .env
+    environment:
+      # écoute dans le conteneur ; l'accès depuis l'extérieur passe par le port publié
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+    ports:
+      # pour n'exposer qu'en local : "127.0.0.1:8000:8000"
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

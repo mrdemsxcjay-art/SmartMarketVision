@@ -1,0 +1,30 @@
+# ------------------------------------------------------------------ secrets
+# .env contient le jeton Telegram : il ne doit JAMAIS entrer dans le dépôt.
+# Les sauvegardes de .env non plus.
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------------------------------- python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# --------------------------------------------------------------------- node
+node_modules/
+frontend/dist/
+# dashboard construit : reproductible avec "cd frontend && npm run build"
+frontend/dashboard_build/
+
+# ------------------------------------------------- données d'exécution
+# base SQLite (l'historique de marché réel se reconstruit tout seul) et
+# captures PNG réelles de la Phase 7 : volumineuses, jamais dans Git.
+data/
+# les apercus du dashboard (reports/dashboard/) sont CONSERVES : ce sont les
+# preuves visuelles de la chaine P5->P8 (versions JPEG allegees).
+
+# ------------------------------------------------------------------- divers
+.DS_Store
+*.log
