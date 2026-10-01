@@ -9,6 +9,11 @@ Pourquoi c'est nécessaire : l'aperçu affiché dans Arena est servi par la **sa
 
 ---
 
+> **Vous préférez passer par GitHub ?** Tout est préparé (dépôt, CI, Codespaces, Render,
+> GitHub Pages) : voir **`DEPLOIEMENT_GITHUB.md`**. Avec un hébergement GitHub/Render, le fichier
+> `.env` devient **facultatif** : les deux valeurs Telegram se saisissent dans l'interface de la
+> plateforme, ce qui évite d'avoir à trouver un fichier sur le disque.
+
 ## 0. Ce qu'il faut sur la machine
 
 | Besoin | Version | Obligatoire ? |

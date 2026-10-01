@@ -230,7 +230,7 @@ Build de production `npm run build` OK (`dashboard_build`, servi par le backend 
 
 ### Aperçus du dashboard (fichiers conservés)
 `reports/dashboard/` contient les captures d'écran du **dashboard réel** prises sur le serveur local, pour que la preuve visuelle survive à un recyclage de l'environnement :
-`dashboard_desktop_complet.png` (page entière, P1→P8) · `dashboard_portrait_390x844.png` · `dashboard_paysage_844x390.png` · `panneau_market_overview.png` · `panneau_confluence.png` · `panneau_opportunite.png` (NO_TRADE motivé : `DIRECTIONS_CONTRADICTOIRES`, conditions manquantes en ✗, contradiction comptée) · `panneau_alertes_telegram.png` (mode, file, 3 alertes `SENT` en DRY_RUN, galerie des captures réelles).
+`dashboard_desktop_complet.jpg` (page entière, P1→P8) · `dashboard_portrait_390x844.jpg` · `dashboard_paysage_844x390.jpg` · `panneau_market_overview.png` · `panneau_confluence.png` · `panneau_opportunite.png` (NO_TRADE motivé : `DIRECTIONS_CONTRADICTOIRES`, conditions manquantes en ✗, contradiction comptée) · `panneau_alertes_telegram.png` (mode, file, 3 alertes `SENT` en DRY_RUN, galerie des captures réelles).
 Mesures relevées au moment de ces prises : flux `LIVE`, `CONNECTED`, confluence `0/10`, opportunité `⛔ NO_TRADE`, **aucun scroll horizontal** en 390×844 et 844×390.
 
 ### Bout en bout sur données réelles
@@ -274,6 +274,35 @@ vides dans `.env`). La procédure complète (BotFather → `/start` → `chat_id
 L'assistant ne lit le jeton que depuis `.env`, ne l'affiche jamais et nettoie les messages d'erreur :
 contrôlé avec un jeton factice (« Unauthorized » affiché, **0 occurrence du jeton** dans la sortie).
 Aucune valeur secrète n'a été écrite dans le dépôt.
+
+## PUBLICATION GITHUB (dépôt prêt à pousser)
+
+Le projet n'était pas sous Git : il l'est désormais. Un premier commit contient **210 fichiers**
+(~16 Mo, sans données d'exécution) et un script `PUSH_VERS_GITHUB.sh` publie le dépôt en une
+commande, avec un **contrôle de sécurité** intégré (arrêt immédiat si `.env` est suivi ou si un
+motif de jeton apparaît dans un fichier suivi).
+
+Trois chemins d'aperçu sont préparés, documentés dans `DEPLOIEMENT_GITHUB.md` :
+
+| Chemin | Lien obtenu | Nature |
+|---|---|---|
+| **GitHub Codespaces** (`.devcontainer/`) | `https://<codespace>-8000.app.github.dev` | **aperçu complet et vivant** : le Codespace installe tout, démarre le serveur, transfère le port 8000 et ouvre l'aperçu automatiquement |
+| **Render** (`render.yaml`) | `https://smart-market-vision.onrender.com` | URL fixe, HTTPS, WebSocket ; plan gratuit = mise en veille + disque éphémère (dit franchement) |
+| **GitHub Pages** (`pages.yml`, manuel) | `https://<compte>.github.io/<dépôt>/` | **interface seule** : aucun backend ne tourne sur Pages, donc `DATA UNAVAILABLE` — un bandeau le dit dans la page |
+
+**Le fichier `.env` n'est plus nécessaire** : sur Render les deux valeurs se saisissent dans
+l'interface (type *Secret*), sur Codespaces via *Settings → Codespaces → Secrets*, ou dans le
+terminal du Codespace. `TELEGRAM_MODE` passe de `DRY_RUN` à `REAL` au même endroit. `Dockerfile`
+et healthcheck suivent `${PORT}` : l'image fonctionne à l'identique en local, dans Codespaces et
+chez un hébergeur.
+
+`.gitignore` durci : `.env`, `.env.*` (sauvegardes comprises), `data/` (base SQLite + captures
+réelles), `node_modules/`, `dashboard_build/`. Les aperçus de `reports/dashboard/` restent
+versionnés (preuve visuelle, pleine page convertie en JPEG pour alléger).
+
+CI (`.github/workflows/ci.yml`) : 663 tests backend + 64 tests frontend, **sans réseau et sans
+secret** (le bloc de vérification affirme `NOT_CONFIGURED` en l'absence de variables et refuse
+toute variable de jeton). Étapes reproduites localement avant le commit : elles passent.
 
 ## GLOBAL
 
